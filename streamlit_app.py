@@ -14,7 +14,7 @@ st.sidebar.header("Upload Dataset")
 uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
 
 if uploaded_file is not None:
-    data = pd.read_csv("energy.csv")
+    data = pd.read_csv(uploaded_file)
     st.write("### Dataset Preview:")
     st.write(data.head())
 
@@ -68,5 +68,6 @@ if uploaded_file is not None:
         st.write("### Feature Importances:")
         feature_importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
         st.bar_chart(feature_importances)
+
 
 
