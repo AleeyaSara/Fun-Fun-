@@ -1,47 +1,45 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 st.title('Energy Efficiency Predictor')
 
 data = pd.read_csv('energy.csv')
-st.write("Dataset Preview:", data.head())
 
-# Preprocessing
-data = data.dropna()  # Drop missing values
+st.write("Dataset Overview:")
+st.write(data.describe())
+st.write(data.info())
+
+data = data.dropna()
 if 'Unix Timestamp' in data.columns:
     data = data.drop(columns=['Unix Timestamp'])
 
-# Feature engineering
-if 'Energy Consumption (kWh)' in data.columns and 'Apparent Power' in data.columns:
-    data['Efficiency Index'] = data['Energy Consumption (kWh)'] / data['Apparent Power']
+data['Efficiency Index'] = data['Energy Consumption (kWh)'] / data['Apparent Power']
 
 st.write("Processed Data:", data.head())
 
-# Splitting the data
+# Simple train-test split
 target_col = st.selectbox("Select the target column:", data.columns)
 features = data.drop(columns=[target_col])
 target = data[target_col]
-X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
 
-# Model training
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
-predictions = model.predict(X_test)
+train_size = int(0.8 * len(data))
+X_train, X_test = features[:train_size], features[train_size:]
+y_train, y_test = target[:train_size], target[train_size:]
 
-# Model evaluation
-st.write("Accuracy:", accuracy_score(y_test, predictions))
-st.write("Classification Report:", classification_report(y_test, predictions))
+# Simple threshold-based model as a placeholder
+threshold = y_train.mean()
+predictions = [1 if x > threshold else 0 for x in y_test]
 
-# Visualization
-st.subheader('Confusion Matrix')
-cm = confusion_matrix(y_test, predictions)
+# Basic accuracy metric
+accuracy = sum([1 for pred, actual in zip(predictions, y_test) if pred == actual]) / len(y_test)
+st.write("Accuracy:", accuracy)
+
+# Confusion matrix
+cm = pd.crosstab(pd.Series(y_test, name='Actual'), pd.Series(predictions, name='Predicted'))
 fig, ax = plt.subplots()
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
 st.pyplot(fig)
+
