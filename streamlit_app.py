@@ -1,45 +1,72 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-st.title('Energy Efficiency Predictor')
+# Streamlit App
+st.title("Energy Efficiency Predictor")
 
-data = pd.read_csv('energy.csv')
+# Sidebar for user input
+st.sidebar.header("Upload Dataset")
+uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
 
-st.write("Dataset Overview:")
-st.write(data.describe())
-st.write(data.info())
+if uploaded_file is not None:
+    data = pd.read_csv("energy.csv")
+    st.write("### Dataset Preview:")
+    st.write(data.head())
 
-data = data.dropna()
-if 'Unix Timestamp' in data.columns:
-    data = data.drop(columns=['Unix Timestamp'])
+    # Display basic dataset info
+    st.write("### Dataset Description:")
+    st.write(data.describe())
 
-data['Efficiency Index'] = data['Energy Consumption (kWh)'] / data['Apparent Power']
+    # Data preprocessing
+    st.sidebar.header("Preprocessing Options")
+    scaler_choice = st.sidebar.selectbox("Select Scaler:", ["None", "MinMaxScaler", "StandardScaler"])
 
-st.write("Processed Data:", data.head())
+    if scaler_choice != "None":
+        st.write(f"### Applying {scaler_choice} to the dataset")
+        scaler = MinMaxScaler() if scaler_choice == "MinMaxScaler" else StandardScaler()
+        data_scaled = scaler.fit_transform(data.select_dtypes(include=np.number))
+        data = pd.DataFrame(data_scaled, columns=data.select_dtypes(include=np.number).columns)
+        st.write("### Scaled Dataset Preview:")
+        st.write(data.head())
 
-# Simple train-test split
-target_col = st.selectbox("Select the target column:", data.columns)
-features = data.drop(columns=[target_col])
-target = data[target_col]
+    # Sidebar for target selection
+    target_column = st.sidebar.selectbox("Select Target Column:", data.columns)
 
-train_size = int(0.8 * len(data))
-X_train, X_test = features[:train_size], features[train_size:]
-y_train, y_test = target[:train_size], target[train_size:]
+    if target_column:
+        X = data.drop(columns=[target_column])
+        y = data[target_column]
 
-# Simple threshold-based model as a placeholder
-threshold = y_train.mean()
-predictions = [1 if x > threshold else 0 for x in y_test]
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Basic accuracy metric
-accuracy = sum([1 for pred, actual in zip(predictions, y_test) if pred == actual]) / len(y_test)
-st.write("Accuracy:", accuracy)
+        # Model training
+        st.sidebar.header("Model Training")
+        n_estimators = st.sidebar.slider("Number of Trees in Random Forest", 10, 200, 100)
+        model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        model.fit(X_train, y_train)
 
-# Confusion matrix
-cm = pd.crosstab(pd.Series(y_test, name='Actual'), pd.Series(predictions, name='Predicted'))
-fig, ax = plt.subplots()
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-st.pyplot(fig)
+        # Predictions
+        y_pred = model.predict(X_test)
+
+        # Model evaluation
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"### Model Accuracy: {accuracy:.2f}")
+        st.write("### Classification Report:")
+        st.text(classification_report(y_test, y_pred))
+
+        # Confusion matrix
+        st.write("### Confusion Matrix:")
+        confusion = confusion_matrix(y_test, y_pred)
+        st.write(confusion)
+
+        # Feature importance
+        st.write("### Feature Importances:")
+        feature_importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
+        st.bar_chart(feature_importances)
+
 
