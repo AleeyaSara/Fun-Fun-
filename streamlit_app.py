@@ -4,80 +4,73 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-import traceback
 
-# Streamlit App
+# Title and Description
 st.title("Energy Efficiency Predictor")
+st.write("This application predicts energy efficiency metrics using machine learning models.")
 
-# Direct file path for testing
-uploaded_file = "energy.csv"  # Replace file uploader for testing
-
-try:
+# File Uploader
+uploaded_file = st.file_uploader("Upload your dataset (CSV format):", type=["csv"])
+if uploaded_file:
     data = pd.read_csv(uploaded_file)
-    st.write("### Dataset Preview:")
-    st.write(data.head())
+    st.write("### Dataset Preview")
+    st.dataframe(data.head())
 
-    # Display basic dataset info
-    st.write("### Dataset Description:")
+    # Data Exploration
+    st.write("### Data Exploration")
+    st.write("Dataset Shape:", data.shape)
+    st.write("Dataset Summary:")
     st.write(data.describe())
 
-    # Handle missing values
-    if data.isnull().values.any():
-        st.write("### Handling Missing Values:")
-        data = data.fillna(data.median())
-        st.write("Missing values filled with column median.")
+    # Correlation Heatmap
+    st.write("### Correlation Heatmap")
+    corr_matrix = data.corr()
+    fig, ax = plt.subplots(figsize=(10, 8))
+    sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+    st.pyplot(fig)
 
-    # Data preprocessing
-    st.sidebar.header("Preprocessing Options")
-    scaler_choice = st.sidebar.selectbox("Select Scaler:", ["None", "MinMaxScaler", "StandardScaler"])
-
-    if scaler_choice != "None":
-        st.write(f"### Applying {scaler_choice} to the dataset")
-        scaler = MinMaxScaler() if scaler_choice == "MinMaxScaler" else StandardScaler()
-        data_scaled = scaler.fit_transform(data.select_dtypes(include=np.number))
-        data = pd.DataFrame(data_scaled, columns=data.select_dtypes(include=np.number).columns)
-        st.write("### Scaled Dataset Preview:")
-        st.write(data.head())
-
-    # Sidebar for target selection
-    target_column = st.sidebar.selectbox("Select Target Column:", data.columns)
-
+    # Data Preprocessing
+    st.write("### Data Preprocessing")
+    target_column = st.selectbox("Select the target column:", data.columns)
     if target_column:
-        X = data.drop(columns=[target_column])
-        y = data[target_column]
+        features = data.drop(columns=[target_column])
+        target = data[target_column]
 
-        # Train-test split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        scaler_option = st.radio("Select a scaling method:", ("None", "Min-Max Scaler", "Standard Scaler"))
 
-        # Model training
-        st.sidebar.header("Model Training")
-        n_estimators = st.sidebar.slider("Number of Trees in Random Forest", 10, 200, 100)
-        model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        if scaler_option == "Min-Max Scaler":
+            scaler = MinMaxScaler()
+            features = scaler.fit_transform(features)
+        elif scaler_option == "Standard Scaler":
+            scaler = StandardScaler()
+            features = scaler.fit_transform(features)
+
+        X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+        st.write("Training set shape:", X_train.shape)
+        st.write("Test set shape:", X_test.shape)
+
+        # Model Training
+        st.write("### Model Training")
+        model = RandomForestClassifier(random_state=42)
         model.fit(X_train, y_train)
-
-        # Predictions
         y_pred = model.predict(X_test)
 
-        # Model evaluation
-        accuracy = accuracy_score(y_test, y_pred)
-        st.write(f"### Model Accuracy: {accuracy:.2f}")
-        st.write("### Classification Report:")
+        # Model Evaluation
+        st.write("### Model Evaluation")
+        st.write("Accuracy:", accuracy_score(y_test, y_pred))
+        st.write("Classification Report:")
         st.text(classification_report(y_test, y_pred))
 
-        # Confusion matrix
-        st.write("### Confusion Matrix:")
-        confusion = confusion_matrix(y_test, y_pred)
-        st.write(confusion)
+        # Confusion Matrix
+        st.write("### Confusion Matrix")
+        fig, ax = plt.subplots()
+        sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax)
+        st.pyplot(fig)
 
-        # Feature importance
-        st.write("### Feature Importances:")
-        feature_importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
-        st.bar_chart(feature_importances)
-
-except Exception as e:
-    st.error("An error occurred while processing the file:")
-    st.text(traceback.format_exc())
 
 
 
