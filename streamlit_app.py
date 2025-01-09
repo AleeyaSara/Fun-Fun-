@@ -93,7 +93,8 @@ if uploaded_file:
         # Confusion Matrix
         st.write("### Confusion Matrix")
         fig, ax = plt.subplots()
-        ConfusionMatrixDisplay.from_predictions(y_test, predictions, ax=ax)
+        all_labels = ['A', 'B', 'C', 'D']  # Ensure all labels are included
+        ConfusionMatrixDisplay.from_predictions(y_test, predictions, labels=all_labels, ax=ax)
         st.pyplot(fig)
 
         # Visualization
