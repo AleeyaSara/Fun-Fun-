@@ -4,72 +4,85 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-# Title and Description
+# Streamlit app title
 st.title("Energy Efficiency Predictor")
-st.write("This application predicts energy efficiency metrics using machine learning models.")
 
-# File Uploader
-uploaded_file = st.file_uploader("Upload your dataset (CSV format):", type=["csv"])
-if uploaded_file:
-    data = pd.read_csv(uploaded_file)
-    st.write("### Dataset Preview")
-    st.dataframe(data.head())
+# Sidebar for user input
+st.sidebar.header("User Input")
 
-    # Data Exploration
-    st.write("### Data Exploration")
-    st.write("Dataset Shape:", data.shape)
-    st.write("Dataset Summary:")
+# File uploader for the dataset
+data_file = st.sidebar.file_uploader("Upload your dataset (CSV format)", type=["csv"])
+
+if data_file:
+    data = pd.read_csv(data_file)
+
+    # Display dataset preview
+    st.subheader("Dataset Preview")
+    st.write(data.head())
+
+    # Display dataset info
+    st.subheader("Dataset Information")
+    buffer = []
+    data.info(buf=buffer)
+    st.text("\n".join(buffer))
+
+    # Descriptive statistics
+    st.subheader("Descriptive Statistics")
     st.write(data.describe())
 
-    # Correlation Heatmap
-    st.write("### Correlation Heatmap")
-    corr_matrix = data.corr()
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+    # Data visualization
+    st.subheader("Correlation Heatmap")
+    fig, ax = plt.subplots()
+    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", ax=ax)
     st.pyplot(fig)
 
-    # Data Preprocessing
-    st.write("### Data Preprocessing")
-    target_column = st.selectbox("Select the target column:", data.columns)
-    if target_column:
-        features = data.drop(columns=[target_column])
-        target = data[target_column]
+    # Feature selection and preprocessing
+    target_column = st.sidebar.selectbox("Select Target Column", options=data.columns)
+    feature_columns = st.sidebar.multiselect("Select Feature Columns", options=[col for col in data.columns if col != target_column])
 
-        scaler_option = st.radio("Select a scaling method:", ("None", "Min-Max Scaler", "Standard Scaler"))
+    if target_column and feature_columns:
+        X = data[feature_columns]
+        y = data[target_column]
 
-        if scaler_option == "Min-Max Scaler":
+        # Scaling options
+        scaling_method = st.sidebar.selectbox("Select Scaling Method", ["None", "MinMaxScaler", "StandardScaler"])
+        if scaling_method == "MinMaxScaler":
             scaler = MinMaxScaler()
-            features = scaler.fit_transform(features)
-        elif scaler_option == "Standard Scaler":
+            X = scaler.fit_transform(X)
+        elif scaling_method == "StandardScaler":
             scaler = StandardScaler()
-            features = scaler.fit_transform(features)
+            X = scaler.fit_transform(X)
 
-        X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+        # Train-test split
+        test_size = st.sidebar.slider("Test Size (fraction)", 0.1, 0.5, 0.2)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
-        st.write("Training set shape:", X_train.shape)
-        st.write("Test set shape:", X_test.shape)
-
-        # Model Training
-        st.write("### Model Training")
-        model = RandomForestClassifier(random_state=42)
+        # Model training
+        st.subheader("Model Training")
+        n_estimators = st.sidebar.slider("Number of Trees in Random Forest", 10, 200, 100)
+        model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
         model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
 
-        # Model Evaluation
-        st.write("### Model Evaluation")
-        st.write("Accuracy:", accuracy_score(y_test, y_pred))
-        st.write("Classification Report:")
+        # Model evaluation
+        y_pred = model.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"Model Accuracy: {accuracy:.2f}")
+
+        st.subheader("Classification Report")
         st.text(classification_report(y_test, y_pred))
 
-        # Confusion Matrix
-        st.write("### Confusion Matrix")
+        st.subheader("Confusion Matrix")
         fig, ax = plt.subplots()
         sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax)
         st.pyplot(fig)
+
+else:
+    st.write("Please upload a dataset to get started.")
+
 
 
 
