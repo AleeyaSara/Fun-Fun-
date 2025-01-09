@@ -120,10 +120,11 @@ if uploaded_file:
             power_normalized = scaler.transform([[power_consumption]])[0][0]
 
             # Predict
-            input_data = [[power_normalized, appliance_encoded, usage_pattern_encoded]]
+            input_data = pd.DataFrame([[power_normalized, appliance_encoded, usage_pattern_encoded]], columns=features)
             prediction = model.predict(input_data)[0]
 
             st.write(f"### Predicted Energy Efficiency Rating: {prediction}")
+
 
 
 
