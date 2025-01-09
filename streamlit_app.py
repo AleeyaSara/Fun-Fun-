@@ -37,12 +37,18 @@ if data_file:
 
     # Data visualization
     st.subheader("Correlation Heatmap")
-    fig, ax = plt.subplots(figsize=(12, 10))  # Increased figure size for better readability
-    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 10})  # Adjusted annotation font size
-    ax.set_title("Correlation Heatmap", fontsize=16)
-    plt.xticks(fontsize=10, rotation=45)
-    plt.yticks(fontsize=10)
-    st.pyplot(fig)
+
+    # Allow the user to select a subset of features for the heatmap
+    selected_features = st.sidebar.multiselect("Select Features for Heatmap", options=data.columns, default=data.columns[:5])
+
+    if selected_features:
+        fig, ax = plt.subplots(figsize=(8, 6))  # Reduced figure size
+        corr_matrix = data[selected_features].corr()
+        sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})  # Reduced annotation font size
+        ax.set_title("Correlation Heatmap", fontsize=14)
+        plt.xticks(fontsize=8, rotation=45)
+        plt.yticks(fontsize=8)
+        st.pyplot(fig)
 
     # Feature selection and preprocessing
     target_column = st.sidebar.selectbox("Select Target Column", options=data.columns)
