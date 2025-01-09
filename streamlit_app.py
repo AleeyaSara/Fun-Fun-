@@ -7,6 +7,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+import io
 
 # Streamlit app title
 st.title("Energy Efficiency Predictor")
@@ -26,9 +27,9 @@ if data_file:
 
     # Display dataset info
     st.subheader("Dataset Information")
-    buffer = []
+    buffer = io.StringIO()
     data.info(buf=buffer)
-    st.text("\n".join(buffer))
+    st.text(buffer.getvalue())
 
     # Descriptive statistics
     st.subheader("Descriptive Statistics")
@@ -82,6 +83,7 @@ if data_file:
 
 else:
     st.write("Please upload a dataset to get started.")
+
 
 
 
