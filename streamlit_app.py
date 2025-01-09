@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
 import io
 
 # Streamlit app title
@@ -36,15 +36,23 @@ if data_file:
     st.write(data.describe())
 
     # Data visualization
-    st.subheader("Correlation Heatmap")
+    st.subheader("Feature Relationships")
 
-    # Allow the user to select a subset of features for the heatmap
+    # Scatter plot example: Power Consumption vs Energy Efficiency Rating
+    if "Power Consumption" in data.columns and "Energy Efficiency Rating" in data.columns:
+        fig, ax = plt.subplots()
+        sns.scatterplot(x="Power Consumption", y="Energy Efficiency Rating", data=data, ax=ax)
+        ax.set_title("Power Consumption vs Energy Efficiency Rating")
+        st.pyplot(fig)
+
+    # Correlation Heatmap
+    st.subheader("Correlation Heatmap")
     selected_features = st.sidebar.multiselect("Select Features for Heatmap", options=data.columns, default=data.columns[:5])
 
     if selected_features:
-        fig, ax = plt.subplots(figsize=(8, 6))  # Reduced figure size
+        fig, ax = plt.subplots(figsize=(8, 6))
         corr_matrix = data[selected_features].corr()
-        sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})  # Reduced annotation font size
+        sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})
         ax.set_title("Correlation Heatmap", fontsize=14)
         plt.xticks(fontsize=8, rotation=45)
         plt.yticks(fontsize=8)
@@ -57,6 +65,16 @@ if data_file:
     if target_column and feature_columns:
         X = data[feature_columns]
         y = data[target_column]
+
+        # Encode categorical target if necessary
+        if y.dtypes == 'object':
+            label_encoder = LabelEncoder()
+            y = label_encoder.fit_transform(y)
+
+        # Encode categorical features
+        for col in X.select_dtypes(include=['object']).columns:
+            encoder = LabelEncoder()
+            X[col] = encoder.fit_transform(X[col])
 
         # Scaling options
         scaling_method = st.sidebar.selectbox("Select Scaling Method", ["None", "MinMaxScaler", "StandardScaler"])
@@ -90,8 +108,35 @@ if data_file:
         sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax)
         st.pyplot(fig)
 
+        # Prediction tool
+        st.subheader("Predict Energy Efficiency Rating")
+        input_data = {}
+        for col in feature_columns:
+            if col in data.select_dtypes(include=['object']).columns:
+                options = data[col].unique()
+                input_data[col] = st.selectbox(f"Select {col}", options=options)
+            else:
+                input_data[col] = st.number_input(f"Enter {col}", value=0.0)
+
+        input_df = pd.DataFrame([input_data])
+
+        # Encode and scale input data
+        for col in input_df.select_dtypes(include=['object']).columns:
+            encoder = LabelEncoder()
+            input_df[col] = encoder.fit_transform(input_df[col])
+
+        if scaling_method != "None":
+            input_df = scaler.transform(input_df)
+
+        prediction = model.predict(input_df)
+        if y.dtypes == 'object':
+            prediction = label_encoder.inverse_transform(prediction)
+
+        st.write(f"Predicted Energy Efficiency Rating: {prediction[0]}")
+
 else:
     st.write("Please upload a dataset to get started.")
+
 
 
 
