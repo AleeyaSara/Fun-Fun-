@@ -37,8 +37,8 @@ if data_file:
 
     # Data visualization
     st.subheader("Correlation Heatmap")
-    fig, ax = plt.subplots()
-    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", ax=ax)
+    fig, ax = plt.subplots(figsize=(10, 8))  # Adjusted figure size for better readability
+    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})  # Smaller font size for annotations
     st.pyplot(fig)
 
     # Feature selection and preprocessing
