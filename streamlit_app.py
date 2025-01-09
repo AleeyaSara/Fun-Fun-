@@ -37,8 +37,11 @@ if data_file:
 
     # Data visualization
     st.subheader("Correlation Heatmap")
-    fig, ax = plt.subplots(figsize=(10, 8))  # Adjusted figure size for better readability
-    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})  # Smaller font size for annotations
+    fig, ax = plt.subplots(figsize=(12, 10))  # Increased figure size for better readability
+    sns.heatmap(data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 10})  # Adjusted annotation font size
+    ax.set_title("Correlation Heatmap", fontsize=16)
+    plt.xticks(fontsize=10, rotation=45)
+    plt.yticks(fontsize=10)
     st.pyplot(fig)
 
     # Feature selection and preprocessing
@@ -83,6 +86,7 @@ if data_file:
 
 else:
     st.write("Please upload a dataset to get started.")
+
 
 
 
