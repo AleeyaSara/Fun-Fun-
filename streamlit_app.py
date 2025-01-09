@@ -1,141 +1,97 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
-import io
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 
-# Streamlit app title
-st.title("Energy Efficiency Predictor")
+# Streamlit App
+st.title("Energy Efficiency Predictor for Household Appliances")
 
-# Sidebar for user input
-st.sidebar.header("User Input")
+# Upload Dataset
+uploaded_file = st.file_uploader("Upload your dataset (CSV file):", type=["csv"])
 
-# File uploader for the dataset
-data_file = st.sidebar.file_uploader("Upload your dataset (CSV format)", type=["csv"])
+if uploaded_file:
+    # Load the dataset
+    data = pd.read_csv(uploaded_file)
+    st.write("## Dataset Preview")
+    st.dataframe(data.head())
 
-if data_file:
-    data = pd.read_csv(data_file)
-
-    # Display dataset preview
-    st.subheader("Dataset Preview")
-    st.write(data.head())
-
-    # Display dataset info
-    st.subheader("Dataset Information")
-    buffer = io.StringIO()
-    data.info(buf=buffer)
-    st.text(buffer.getvalue())
-
-    # Descriptive statistics
-    st.subheader("Descriptive Statistics")
+    # Display basic dataset statistics
+    st.write("## Dataset Summary")
     st.write(data.describe())
 
-    # Data visualization
-    st.subheader("Feature Relationships")
+    # Preprocessing
+    st.write("## Data Preprocessing")
+    # Encoding categorical data
+    if 'Appliance Type' in data.columns:
+        le = LabelEncoder()
+        data['Appliance Type Encoded'] = le.fit_transform(data['Appliance Type'])
+        st.write("Encoded Appliance Type:", le.classes_)
 
-    # Scatter plot example: Power Consumption vs Energy Efficiency Rating
-    if "Power Consumption" in data.columns and "Energy Efficiency Rating" in data.columns:
-        fig, ax = plt.subplots()
-        sns.scatterplot(x="Power Consumption", y="Energy Efficiency Rating", data=data, ax=ax)
-        ax.set_title("Power Consumption vs Energy Efficiency Rating")
-        st.pyplot(fig)
+    # Normalize numerical data
+    scaler = StandardScaler()
+    data['Power Consumption Normalized'] = scaler.fit_transform(data[['Power Consumption']])
 
-    # Correlation Heatmap
-    st.subheader("Correlation Heatmap")
-    selected_features = st.sidebar.multiselect("Select Features for Heatmap", options=data.columns, default=data.columns[:5])
+    # Preparing features and target
+    features = ['Power Consumption Normalized', 'Appliance Type Encoded', 'Usage Pattern']
+    target = 'Energy Efficiency Rating'
 
-    if selected_features:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        corr_matrix = data[selected_features].corr()
-        sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", ax=ax, annot_kws={"size": 8})
-        ax.set_title("Correlation Heatmap", fontsize=14)
-        plt.xticks(fontsize=8, rotation=45)
-        plt.yticks(fontsize=8)
-        st.pyplot(fig)
+    X = data[features]
+    y = data[target]
 
-    # Feature selection and preprocessing
-    target_column = st.sidebar.selectbox("Select Target Column", options=data.columns)
-    feature_columns = st.sidebar.multiselect("Select Feature Columns", options=[col for col in data.columns if col != target_column])
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    if target_column and feature_columns:
-        X = data[feature_columns]
-        y = data[target_column]
+    # Model Training
+    st.write("## Model Training")
+    model = DecisionTreeClassifier()
+    model.fit(X_train, y_train)
 
-        # Encode categorical target if necessary
-        if y.dtypes == 'object':
-            label_encoder = LabelEncoder()
-            y = label_encoder.fit_transform(y)
+    # Model Evaluation
+    predictions = model.predict(X_test)
+    accuracy = accuracy_score(y_test, predictions)
 
-        # Encode categorical features
-        for col in X.select_dtypes(include=['object']).columns:
-            encoder = LabelEncoder()
-            X[col] = encoder.fit_transform(X[col])
+    st.write(f"### Model Accuracy: {accuracy * 100:.2f}%")
 
-        # Scaling options
-        scaling_method = st.sidebar.selectbox("Select Scaling Method", ["None", "MinMaxScaler", "StandardScaler"])
-        if scaling_method == "MinMaxScaler":
-            scaler = MinMaxScaler()
-            X = scaler.fit_transform(X)
-        elif scaling_method == "StandardScaler":
-            scaler = StandardScaler()
-            X = scaler.fit_transform(X)
+    st.write("### Classification Report:")
+    st.text(classification_report(y_test, predictions))
 
-        # Train-test split
-        test_size = st.sidebar.slider("Test Size (fraction)", 0.1, 0.5, 0.2)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+    # Confusion Matrix
+    st.write("### Confusion Matrix")
+    fig, ax = plt.subplots()
+    ConfusionMatrixDisplay.from_predictions(y_test, predictions, ax=ax)
+    st.pyplot(fig)
 
-        # Model training
-        st.subheader("Model Training")
-        n_estimators = st.sidebar.slider("Number of Trees in Random Forest", 10, 200, 100)
-        model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
-        model.fit(X_train, y_train)
+    # Visualization
+    st.write("## Data Visualization")
+    st.write("### Energy Efficiency by Power Consumption")
+    fig, ax = plt.subplots()
+    scatter = ax.scatter(data['Power Consumption'], data['Energy Efficiency Rating'], c='blue')
+    ax.set_title('Energy Efficiency by Power Consumption')
+    ax.set_xlabel('Power Consumption (kWh)')
+    ax.set_ylabel('Energy Efficiency Rating')
+    st.pyplot(fig)
 
-        # Model evaluation
-        y_pred = model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        st.write(f"Model Accuracy: {accuracy:.2f}")
+    # Prediction Section
+    st.write("## Make Predictions")
+    power_consumption = st.number_input("Enter Power Consumption (kWh):", min_value=0.0, step=0.1)
+    appliance_type = st.selectbox("Select Appliance Type:", le.classes_)
+    usage_pattern = st.selectbox("Select Usage Pattern:", ["Occasional usage", "Daily usage", "Frequent usage"])
 
-        st.subheader("Classification Report")
-        st.text(classification_report(y_test, y_pred))
+    if st.button("Predict Energy Efficiency Rating"):
+        # Transform inputs
+        appliance_encoded = le.transform([appliance_type])[0]
+        usage_pattern_encoded = ["Occasional usage", "Daily usage", "Frequent usage"].index(usage_pattern)
+        power_normalized = scaler.transform([[power_consumption]])[0][0]
 
-        st.subheader("Confusion Matrix")
-        fig, ax = plt.subplots()
-        sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax)
-        st.pyplot(fig)
+        # Predict
+        input_data = [[power_normalized, appliance_encoded, usage_pattern_encoded]]
+        prediction = model.predict(input_data)[0]
 
-        # Prediction tool
-        st.subheader("Predict Energy Efficiency Rating")
-        input_data = {}
-        for col in feature_columns:
-            if col in data.select_dtypes(include=['object']).columns:
-                options = data[col].unique()
-                input_data[col] = st.selectbox(f"Select {col}", options=options)
-            else:
-                input_data[col] = st.number_input(f"Enter {col}", value=0.0)
+        st.write(f"### Predicted Energy Efficiency Rating: {prediction}")
 
-        input_df = pd.DataFrame([input_data])
-
-        # Encode and scale input data
-        for col in input_df.select_dtypes(include=['object']).columns:
-            encoder = LabelEncoder()
-            input_df[col] = encoder.fit_transform(input_df[col])
-
-        if scaling_method != "None":
-            input_df = scaler.transform(input_df)
-
-        prediction = model.predict(input_df)
-        if y.dtypes == 'object':
-            prediction = label_encoder.inverse_transform(prediction)
-
-        st.write(f"Predicted Energy Efficiency Rating: {prediction[0]}")
-
-else:
-    st.write("Please upload a dataset to get started.")
 
 
 
