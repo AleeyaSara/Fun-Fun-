@@ -16,7 +16,7 @@ st.title("Energy Efficiency Predictor")
 st.sidebar.header("User Input")
 
 # File uploader for the dataset
-data_file = "energy.csv"
+data_file = st.sidebar.file_uploader("Upload your dataset (CSV format)", type=["csv"])
 
 if data_file:
     data = pd.read_csv(data_file)
@@ -83,6 +83,7 @@ if data_file:
 
 else:
     st.write("Please upload a dataset to get started.")
+
 
 
 
