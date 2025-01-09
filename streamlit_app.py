@@ -76,6 +76,13 @@ if uploaded_file:
         # Split the data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+        # Check label distribution
+        st.write("### Label Distribution in Training Set")
+        st.write(y_train.value_counts())
+
+        st.write("### Label Distribution in Test Set")
+        st.write(y_test.value_counts())
+
         # Model Training
         st.write("## Model Training")
         model = DecisionTreeClassifier()
@@ -96,6 +103,10 @@ if uploaded_file:
         all_labels = ['A', 'B', 'C', 'D']  # Ensure all labels are included
         ConfusionMatrixDisplay.from_predictions(y_test, predictions, labels=all_labels, ax=ax)
         st.pyplot(fig)
+
+        # Debugging Predictions
+        st.write("### Predictions and True Labels")
+        st.write(pd.DataFrame({'True Label': y_test, 'Prediction': predictions}).head())
 
         # Visualization
         st.write("## Data Visualization")
@@ -124,7 +135,6 @@ if uploaded_file:
             prediction = model.predict(input_data)[0]
 
             st.write(f"### Predicted Energy Efficiency Rating: {prediction}")
-
 
 
 
