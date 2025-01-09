@@ -112,10 +112,18 @@ if uploaded_file:
         st.write("## Data Visualization")
         st.write("### Energy Efficiency by Power Consumption")
         fig, ax = plt.subplots()
-        scatter = ax.scatter(data['Power Consumption'], data['Energy Efficiency Rating'].cat.codes, c='blue')
+        if not pd.api.types.is_categorical_dtype(data['Energy Efficiency Rating']):
+            data['Energy Efficiency Rating'] = pd.Categorical(data['Energy Efficiency Rating'], categories=['A', 'B', 'C', 'D'], ordered=True)
+        scatter = ax.scatter(
+            data['Power Consumption'],
+            data['Energy Efficiency Rating'].cat.codes,
+            c='blue'
+        )
         ax.set_title('Energy Efficiency by Power Consumption')
         ax.set_xlabel('Power Consumption (kWh)')
         ax.set_ylabel('Energy Efficiency Rating')
+        ax.set_yticks(range(len(data['Energy Efficiency Rating'].cat.categories)))
+        ax.set_yticklabels(data['Energy Efficiency Rating'].cat.categories)
         st.pyplot(fig)
 
         # Prediction Section
